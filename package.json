@@ -14,6 +14,7 @@
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^2.0.0",
+		"@sveltejs/adapter-static": "^2.0.3",
 		"@sveltejs/kit": "^1.20.4",
 		"@typescript-eslint/eslint-plugin": "^5.45.0",
 		"@typescript-eslint/parser": "^5.45.0",
@@ -29,5 +30,11 @@
 		"vite": "^4.4.2",
 		"vitest": "^0.33.0"
 	},
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"@techstark/opencv-js": "4.8.0-release.3",
+		"rxing-wasm": "^0.1.24",
+		"vite-plugin-top-level-await": "^1.3.1",
+		"vite-plugin-wasm": "^3.2.2"
+	}
 }
