@@ -47,11 +47,23 @@ export async function getBarcodeImage(imgSrc: HTMLCanvasElement){
   }
 
   let br = biggestRect
+  // make rectangle bigger to get some lee way
+  let scaleFactor = wImg.cols*0.02
+  br = {
+    x: br.x - scaleFactor,
+    y: br.y - scaleFactor,
+    width: br.width + 2*scaleFactor,
+    height: br.height + 2*scaleFactor
+  }
+  img = img.rowRange(br.y, br.y+br.height)
+  cv.rotate(img, img, cv.ROTATE_90_CLOCKWISE)
+  img = img.rowRange(br.x, br.x+br.width)
+  cv.rotate(img, img, cv.ROTATE_90_COUNTERCLOCKWISE)
 
-  // draw rectangle
-  cv.rectangle(wImg, {width:0, height:0, x: br.x, y:br.y},{width:0, height:0, x: br.width+br.x, y:br.height+br.y}, [200, 0, 200, 200], 5)
+  // // draw rectangle
+  // cv.rectangle(img, {width:0, height:0, x: br.x, y:br.y},{width:0, height:0, x: br.width+br.x, y:br.height+br.y}, [200, 0, 200, 200], 5)
 
-  cv.cvtColor(wImg, img, cv.COLOR_GRAY2RGBA)
+  // cv.cvtColor(wImg, img, cv.COLOR_GRAY2RGBA)
   return img
 }
 

@@ -4,7 +4,6 @@
 
 
   let canvas: HTMLCanvasElement
-  let canvasTransform: HTMLCanvasElement
   let user_files: FileList
   $: if(user_files){
       handleFile(user_files[0])
@@ -41,7 +40,7 @@
     }
   }
 
-  function handleDecode(canvas: HTMLCanvasElement){
+  async function handleDecode(canvas: HTMLCanvasElement){
     const context = canvas.getContext('2d');
     if (!context){
       return
@@ -59,7 +58,6 @@
   }
 
   function extractData(text: string){
-    console.log(text)
     let utf8Encode = new TextEncoder();
     let bytes = utf8Encode.encode(text);
 
@@ -75,13 +73,13 @@
   async function handleTransform(canvas: HTMLCanvasElement){
     let transformImage = await getBarcodeImage(canvas)
     let imgData = new ImageData(new Uint8ClampedArray(transformImage.data), transformImage.cols, transformImage.rows)
-    let ctx = canvasTransform.getContext("2d")
+    let ctx = canvas.getContext("2d")
     if (!ctx){
       return
     }
-    ctx.clearRect(0, 0, canvasTransform.width, canvasTransform.height)
-    canvasTransform.width = imgData.width
-    canvasTransform.height = imgData.height
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    canvas.width = imgData.width
+    canvas.height = imgData.height
     ctx.putImageData(imgData, 0, 0)
   }
 </script>
@@ -97,5 +95,4 @@
     <b>{idField.label}:</b>  <span>{idField.value}</span>
   </div>
 {/each}
-<canvas bind:this={canvas} style="display: none;"></canvas>
-<canvas bind:this={canvasTransform} ></canvas>
+<canvas bind:this={canvas} ></canvas>
