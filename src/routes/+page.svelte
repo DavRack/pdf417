@@ -1,202 +1,183 @@
 <script lang="ts">
-  let a = null
-  async function im(){
-    try{
-      a = await import("rxing-wasm")
-    }catch(e){
-      alert(e)
+	//import * as rxing from "rxing-wasm";
+
+  export let decodesPerSecond = 1
+
+  let cameraPreviewCanvas: HTMLCanvasElement
+  let video: HTMLVideoElement
+
+  const BARCODE_ASPECTRATIO = 5
+  const BARCODE_OVERLAY_WIDTH = 90
+  let height = 3840;     // This will be computed based on the input stream
+  let width = 2160;    // We will scale the photo width to this. UHD horizontal resolution
+  let codeFound = false
+  let error: string
+
+
+  let idData = [
+    {label: "Primer Nómbre", value: "", field:"firstName", position: [104, 127]},
+    {label: "Segundo nombre", value: "", field:"middleName", position: [127, 150]},
+    {label: "Primer Apellido", value: "", field:"lastName", position: [58, 81]},
+    {label: "Segundo Apellido", value: "", field:"secondLastName", position: [81, 104]},
+    {label: "Número documento", value: "", field:"documentNumber", position: [48,58]},
+    {label: "Genero", value: "", field:"gender", position: [151, 152]},
+    {label: "Día nacimiento", value: "", field:"birthdayDay", position: [158, 160]},
+    {label: "Mes nacimiento", value: "", field:"birthdayMonth", position: [156, 158]},
+    {label: "Año nacimiento", value: "", field:"birthdayYear", position: [152, 156]},
+    {label: "Tipo de sangre", value: "", field:"bloodType", position: [166, 168]},
+    {label: "Código de departamento", value: "", field:"departmentCode", position: [160, 162]},
+    {label: "Código municipio", value: "", field:"municipalityCode", position: [162, 165]},
+    {label: "Código afis", value: "", field:"afisCode", position: [0, 24]},
+    {label: "Finger Card", value: "", field:"fingerCard", position: [40, 48]},
+  ]
+
+  const userVideoConfig = {
+    //aspectRatio: ID_BARCODE_ASPECTRATIO,
+    autoGainControl: false,
+    //channelCount?: ConstrainULong;
+    //deviceId?: ConstrainDOMString;
+    //displaySurface?: ConstrainDOMString;
+    //echoCancellation?: ConstrainBoolean;
+    //facingMode: "environment",
+    //frameRate?: ConstrainDouble;
+    //groupId?: ConstrainDOMString;
+    noiseSuppression: false,
+    //sampleRate?: ConstrainULong;
+    //sampleSize?: ConstrainULong;
+    width: height,
+    height: width,
+  }
+
+  const videoConfig:MediaTrackConstraints = {
+    advanced: [
+      {
+        ...userVideoConfig,
+        //zoom: 2
+      }
+    ]
+  }
+  let timer = setInterval(handleDecode, 1000/decodesPerSecond)
+
+  let errorPerm = ""
+  async function startUp(videoConfig: MediaTrackConstraints, camera: MediaDeviceInfo){
+    if(!camera.deviceId){
+      let cameras = (await navigator.mediaDevices.enumerateDevices())
+      .filter(device => device.kind === "videoinput")
+      camera = cameras.find(camera => camera.label.includes("back") || camera.label.includes("trasera"))
+      userSelectedCamera = camera
+    }
+
+    navigator.mediaDevices
+      .getUserMedia({ audio: false, video: {
+        ...videoConfig,
+        deviceId: camera?.deviceId,
+      }})
+      .then((stream) => {
+        video.srcObject = stream;
+        video.play();
+      })
+  }
+  function takepicture(): ImageData {
+    // take a picture of the rectangle of interest for the bar code
+
+    // get the size and offset for the interest rectangle
+    let barcodeWidthPercent = (BARCODE_OVERLAY_WIDTH/100)
+    let barcodeWidth = video.videoWidth*barcodeWidthPercent
+    let barcodeHeight = barcodeWidth/(BARCODE_ASPECTRATIO)
+    let barcodeYOffset = (video.videoHeight/2)-(barcodeHeight/2)
+    let barcodeXOffset = ((1-barcodeWidthPercent)/2)*video.videoWidth
+
+    // apply the barcode size to canvas
+    cameraPreviewCanvas.width = barcodeWidth
+    cameraPreviewCanvas.height = barcodeHeight
+
+    let ctx = cameraPreviewCanvas.getContext("2d")
+    if (!ctx){
+      throw Error("Cant get canvas context")
+    }
+    ctx.fillStyle = "#AAA"
+    ctx.fillRect(0,0, barcodeWidth, barcodeHeight)
+
+    // capture image from video with the calculated offset and size and draw the image into the canvas
+    ctx.drawImage(video, barcodeXOffset, barcodeYOffset, barcodeWidth, barcodeHeight, 0, 0, barcodeWidth, barcodeHeight)
+    const data = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight)
+    return data
+  }
+
+  async function handleDecode(){
+    setCameraOptions()
+    let rxing = await import("rxing-wasm")
+    let hints = new rxing.DecodeHintDictionary()
+    hints.set_hint(rxing.DecodeHintTypes.PossibleFormats, `Pdf417`)
+    try {
+      let imageData = takepicture()
+      const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
+      let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
+      let text = result.text()
+      error = text
+      clearInterval(timer)
+      idData = extractData(text)
+      codeFound = true
+    }catch (e) {
+      error = "no se ha encontrado un código, sigue intentando"
+      codeFound = false
     }
   }
-  im()
-  import {getBarcodeImage} from "./imageManipulation"
-  import {Html5Qrcode, Html5QrcodeScanner, Html5QrcodeSupportedFormats} from "html5-qrcode"
-  import {onMount} from "svelte"
+  let error2 = ""
+  function extractData(rawString: string){
+    error2 = rawString
+    // convert to hex bytes
+    //let hexText = byteArray.map(byte => byte.toString(16).padStart(2,'0')).join('')
+    //error = hexText
+    for (let i = 0;i<idData.length; i++){
+      let idField = idData[i]
+      let data = rawString.slice(...idField.position);
+      let dataRemoveNulls = data.split("").filter(char => char.codePointAt(0) !== 65533).join("")
+      let dataRemoveLeadingZeros = dataRemoveNulls.replace(/^0+/, '')
+      idField.value = dataRemoveLeadingZeros
+    }
+    return idData
+  }
+  extractData("")
+  let userSelectedCamera: MediaDeviceInfo = {deviceId: "", groupId: "", kind: "videoinput", label: "", toJSON: () => {}}
+  $: startUp(videoConfig, userSelectedCamera)
+  let cameraOptions: MediaDeviceInfo[] = []
+  async function setCameraOptions(){
+      let cameras = (await navigator.mediaDevices.enumerateDevices())
+      .filter(device => device.kind === "videoinput")
+    cameraOptions = cameras
+  }
+  $: console.log(userSelectedCamera)
 
-
-  //let canvas: HTMLCanvasElement
-  //let rawText: string
-  //let rawError: string
-  //let errorCount = 0
-  //let user_files: FileList
-  //$: if(user_files){
-  //    handleFile(user_files[0])
-  //}
-
-  //let idData = [
-  //  {label: "Primer Nómbre", value: "", field:"firstName", position: [104, 127]},
-  //  {label: "Segundo nombre", value: "", field:"middleName", position: [127, 150]},
-  //  {label: "Primer Apellido", value: "", field:"lastName", position: [58, 80]},
-  //  {label: "Segundo Apellido", value: "", field:"secondLastName", position: [81, 104]},
-  //  {label: "Número documento", value: "", field:"documentNumber", position: [48,58]},
-  //  {label: "Genero", value: "", field:"gender", position: [152, 153]},
-  //  {label: "Día nacimiento", value: "", field:"birthdayDay", position: [159, 161]},
-  //  {label: "Mes nacimiento", value: "", field:"birthdayMonth", position: [157, 159]},
-  //  {label: "Año nacimiento", value: "", field:"birthdayYear", position: [153, 157]},
-  //  {label: "Tipo de sangre", value: "", field:"bloodType", position: [167, 169]},
-  //  {label: "Código de departamento", value: "", field:"departmentCode", position: [161, 163]},
-  //  {label: "Código municipio", value: "", field:"municipalityCode", position: [163, 166]},
-  //  {label: "Código afis", value: "", field:"afisCode", position: [2, 10]},
-  //  {label: "Finger Card", value: "", field:"fingerCard", position: [40, 48]},
-  //]
-
-  //function handleFile(file: File) {
-  //  const img = new Image;
-  //  img.src = URL.createObjectURL(file);
-  //  const ctx = canvas.getContext('2d');
-  //  if (!ctx){
-  //    return
-  //  }
-  //  img.onload = function () {
-  //    canvas.width = img.width;
-  //    canvas.height = img.height;
-  //    ctx.drawImage(img, 0, 0, img.width, img.height);
-  //  }
-  //}
-
-  //async function handleDecode(canvas: HTMLCanvasElement){
-  //  const context = canvas.getContext('2d');
-  //  if (!context){
-  //    return
-  //  }
-  //  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-  //  const luma_data = convert_js_image_to_luma(new Uint8Array(imageData.data));
-  //  let hints = new DecodeHintDictionary()
-  //  try{
-  //    let result = decode_barcode(luma_data, canvas.width, canvas.height, true)
-  //    let text = result.text()
-  //    rawText = text
-  //    console.log(stringToHex(text))
-  //    extractData(text)
-  //  }catch (e){
-  //    alert(e)
-  //  }
-  //}
-  //const stringToHex = (str) => {
-  //let hex = '';
-  //for (let i = 0; i < str.length; i++) {
-  //  const charCode = str.charCodeAt(i);
-  //  const hexValue = charCode.toString(16);
-
-  //  // Pad with zeros to ensure two-digit representation
-  //  hex += hexValue.padStart(2, '0');
-  //}
-  //return hex;
-  //};//
-
-  //function extractData(text: string){
-  //  let utf8Encode = new TextEncoder();
-  //  let bytes = utf8Encode.encode(text);
-
-  //  for (let i = 0;i<idData.length; i++){
-  //    let idField = idData[i]
-  //    let data = bytes.slice(...idField.position);
-  //    let decoder = new TextDecoder("UTF-8")
-  //    idField.value = decoder.decode(data)
-  //  }
-
-  //  rawText = text
-  //  idData = idData
-  //}
-  //async function handleTransform(canvas: HTMLCanvasElement){
-  //  let transformImage = await getBarcodeImage(canvas)
-  //  let imgData = new ImageData(new Uint8ClampedArray(transformImage.data), transformImage.cols, transformImage.rows)
-  //  let ctx = canvas.getContext("2d")
-  //  if (!ctx){
-  //    return
-  //  }
-  //  ctx.clearRect(0, 0, canvas.width, canvas.height)
-  //  canvas.width = imgData.width
-  //  canvas.height = imgData.height
-  //  ctx.putImageData(imgData, 0, 0)
-  //}
-  //function onScanSuccess(decodedText, decodedResult) {
-  //// handle the scanned code as you like, for example:
-  //console.log(`Code matched = ${decodedText}`, decodedResult);
-  //  rawText = decodedText
-  //}
-
-  //function onScanFailure(error) {
-  //  // handle scan failure, usually better to ignore and keep scanning.
-  //  // for example:
-  //  //console.warn(`Code scan error = ${error}`);
-  //  rawError = error
-  //  errorCount += 1
-
-  //}
-
-  //onMount(async () => {
-  //  let devices = await navigator.mediaDevices.enumerateDevices()
-  //  let videoDevices = Object.values(devices).filter(d => d.kind === "videoinput")
-  //  let devId = videoDevices[1].deviceId
-  //  console.log(videoDevices)
-  //  let html5QrcodeScanner = new Html5QrcodeScanner(
-  //    "reader",
-  //    {
-  //      fps: 10,
-  //      //formatsToSupport: [
-  //      //  Html5QrcodeSupportedFormats.PDF_417
-  //      //],
-  //      //showTorchButtonIfSupported: true,
-  //      showZoomSliderIfSupported: true,
-  //      defaultZoomValueIfSupported: 2,
-  //      videoConstraints: {
-  //        advanced: [
-  //          {
-  //            
-  //            //aspectRatio?: ConstrainDouble,
-  //            autoGainControl: true,
-  //            //channelCount?: ConstrainULong,
-  //            deviceId: devId,
-  //            //displaySurface?: ConstrainDOMString,
-  //            //echoCancellation?: ConstrainBoolean,
-  //            //facingMode?: ConstrainDOMString,
-  //            frameRate: 30,
-  //            //groupId?: ConstrainDOMString,
-  //            height: 400,
-  //            noiseSuppression: false,
-  //            //sampleRate?: ConstrainULong,
-  //            //sampleSize?: ConstrainULong,
-  //            width: 1920,
-  //          }
-  //        ],
-  //      },
-  //      //aspectRatio: 5.5,
-
-  //    },
-  //    /* verbose= */ false);
-  //  html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-  //})
-  //async function handleDecode2(_){
-  //  let file = user_files[0]
-  //  let scanner = new Html5Qrcode("reader")
-  //  let result = await scanner.scanFile(file, false)
-  //  const utf8EncodeText = new TextEncoder()
-  //  let byteArray = Array.from(utf8EncodeText.encode(result))
-  //  let hexText = byteArray.map(byte => byte.toString(16).padStart(2,'0')).join('')
-  //  rawText = result
-  //  rawText = hexText
-  //  //alert(result)
-  //}
 </script>
-<h1>Test pdf417</h1>
-<p>{JSON.stringify(a)}</p>
-<!--
-<p>{rawText}</p>
-<p>errorCount: {errorCount}
-  error: {rawError}</p>
-<input accept="image/png, image/jpeg" type="file" bind:files={user_files}>
-<h2>
-  Barcode data
-  <button on:click={() => {handleDecode2(canvas)}}>decode</button>
-  <button on:click={() => {handleTransform(canvas)}}>transform</button>
-</h2>
-<div width="600px" style="height: 500px; display: inline-block; padding: 0px; border: 1px solid silver;">
-  <div id="reader" style="height: 500px; display: inline-block; padding: 0px; border: 1px solid silver;"></div>
-</div>
-{#each idData as idField (idField.field)}
-  <div>
-    <b>{idField.label}:</b>  <span>{idField.value}</span>
+{#if !codeFound}
+  <div style="background-color: white;">
+    <div>Cambiar cámara</div>
+    <select bind:value={userSelectedCamera} placeholder="Cambiar cámara">
+      {#each cameraOptions as cameraOption (cameraOption.deviceId)}
+        <option value={cameraOption}>
+          {cameraOption.label}
+        </option>
+      {/each}
+    </select>
   </div>
-{/each}
-<canvas bind:this={canvas} ></canvas>
--->
+  <div style="display: flex; flex-direction: row; justify-content: center; max-width: 100svw; height: 90svh;">
+    <div style="max-width: 100svw; max-height: 80svh; position: relative;">
+      <video bind:this={video} on:canplay={() => {}} style="object-fit: initial; width: inherit; height: inherit; max-height: inherit;position: relative;">
+        Video stream not available.
+      </video>
+      <div style="position: absolute; top: 0px; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+        <div style="margin: auto; border-width: 0.2em; border-radius: 1em; border-color: white; border-style: solid; width: {BARCODE_OVERLAY_WIDTH}%; aspect-ratio: {BARCODE_ASPECTRATIO};">
+        </div>
+      </div>
+    </div>
+  </div>
+{:else}
+  {#each idData as idField (idField.field)}
+    <div>
+      <b>{idField.label}:</b>  <span>{idField.value}</span>
+    </div>
+  {/each}
+{/if}
+{errorPerm}
+<canvas bind:this={cameraPreviewCanvas} style="display: none;"></canvas>
