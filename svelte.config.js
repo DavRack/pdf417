@@ -18,6 +18,9 @@ const config = {
     }),
     alias: {
       src: 'src'
+    },
+    paths: {
+      base: '/pdf417'
     }
   },
   ssr: false,
