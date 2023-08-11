@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { DecodedTextType } from "html5-qrcode/esm/core";
-	import { BarcodeFormat, DecodeHintDictionary, DecodeHintTypes, convert_js_image_to_luma, decode_barcode, decode_barcode_with_hints } from "rxing-wasm";
+	//import * as rxing from "rxing-wasm";
 
-  export let decodesPerSecond = 2
+  export let decodesPerSecond = 1
 
   let cameraPreviewCanvas: HTMLCanvasElement
   let video: HTMLVideoElement
 
-  const ID_BARCODE_ASPECTRATIO = 5
-  let width = 3840;    // We will scale the photo width to this. UHD horizontal resolution
-  let height = Math.round(width/ID_BARCODE_ASPECTRATIO);     // This will be computed based on the input stream
+  const BARCODE_ASPECTRATIO = 5
+  const BARCODE_OVERLAY_WIDTH = 90
+  let height = 3840;     // This will be computed based on the input stream
+  let width = 2160;    // We will scale the photo width to this. UHD horizontal resolution
   let codeFound = false
   let error: string
 
@@ -32,41 +32,45 @@
   ]
 
   const userVideoConfig = {
-    //aspectRatio?: ConstrainDouble;
+    //aspectRatio: ID_BARCODE_ASPECTRATIO,
     autoGainControl: false,
     //channelCount?: ConstrainULong;
     //deviceId?: ConstrainDOMString;
     //displaySurface?: ConstrainDOMString;
     //echoCancellation?: ConstrainBoolean;
-    //facingMode?: ConstrainDOMString;
+    //facingMode: "environment",
     //frameRate?: ConstrainDouble;
     //groupId?: ConstrainDOMString;
     noiseSuppression: false,
     //sampleRate?: ConstrainULong;
     //sampleSize?: ConstrainULong;
-    width,
-    height
+    width: height,
+    height: width,
   }
 
   const videoConfig:MediaTrackConstraints = {
     advanced: [
       {
         ...userVideoConfig,
-        zoom: 2
+        //zoom: 2
       }
     ]
   }
   let timer = setInterval(handleDecode, 1000/decodesPerSecond)
 
-  async function startUp(videoConfig: MediaTrackConstraints){
-    let backCamera = (await navigator.mediaDevices.enumerateDevices())
-    .filter(device => device.kind === "videoinput")
-    .find(camera => camera.label.includes("back"))
+  let errorPerm = ""
+  async function startUp(videoConfig: MediaTrackConstraints, camera: MediaDeviceInfo){
+    if(!camera.deviceId){
+      let cameras = (await navigator.mediaDevices.enumerateDevices())
+      .filter(device => device.kind === "videoinput")
+      camera = cameras.find(camera => camera.label.includes("back") || camera.label.includes("trasera"))
+      userSelectedCamera = camera
+    }
 
     navigator.mediaDevices
       .getUserMedia({ audio: false, video: {
         ...videoConfig,
-        deviceId: backCamera?.deviceId,
+        deviceId: camera?.deviceId,
       }})
       .then((stream) => {
         video.srcObject = stream;
@@ -74,27 +78,41 @@
       })
   }
   function takepicture(): ImageData {
-    console.log(video.videoWidth, video.videoHeight)
-    cameraPreviewCanvas.height = video.videoHeight
-    cameraPreviewCanvas.width = video.videoWidth
+    // take a picture of the rectangle of interest for the bar code
+
+    // get the size and offset for the interest rectangle
+    let barcodeWidthPercent = (BARCODE_OVERLAY_WIDTH/100)
+    let barcodeWidth = video.videoWidth*barcodeWidthPercent
+    let barcodeHeight = barcodeWidth/(BARCODE_ASPECTRATIO)
+    let barcodeYOffset = (video.videoHeight/2)-(barcodeHeight/2)
+    let barcodeXOffset = ((1-barcodeWidthPercent)/2)*video.videoWidth
+
+    // apply the barcode size to canvas
+    cameraPreviewCanvas.width = barcodeWidth
+    cameraPreviewCanvas.height = barcodeHeight
+
     let ctx = cameraPreviewCanvas.getContext("2d")
     if (!ctx){
       throw Error("Cant get canvas context")
     }
     ctx.fillStyle = "#AAA"
-    ctx.fillRect(0,0, cameraPreviewCanvas.width, cameraPreviewCanvas.height)
-    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight)
+    ctx.fillRect(0,0, barcodeWidth, barcodeHeight)
+
+    // capture image from video with the calculated offset and size and draw the image into the canvas
+    ctx.drawImage(video, barcodeXOffset, barcodeYOffset, barcodeWidth, barcodeHeight, 0, 0, barcodeWidth, barcodeHeight)
     const data = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight)
     return data
   }
 
   async function handleDecode(){
-    let hints = new DecodeHintDictionary()
-    hints.set_hint(DecodeHintTypes.PossibleFormats, `Pdf417`)
+    setCameraOptions()
+    let rxing = await import("rxing-wasm")
+    let hints = new rxing.DecodeHintDictionary()
+    hints.set_hint(rxing.DecodeHintTypes.PossibleFormats, `Pdf417`)
     try {
       let imageData = takepicture()
-      const luma_data = convert_js_image_to_luma(new Uint8Array(imageData.data));
-      let result = decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
+      const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
+      let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
       let text = result.text()
       error = text
       clearInterval(timer)
@@ -114,18 +132,45 @@
     for (let i = 0;i<idData.length; i++){
       let idField = idData[i]
       let data = rawString.slice(...idField.position);
-      idField.value = data.split("").filter(char => char.codePointAt(0) !== 65533).join("")
+      let dataRemoveNulls = data.split("").filter(char => char.codePointAt(0) !== 65533).join("")
+      let dataRemoveLeadingZeros = dataRemoveNulls.replace(/^0+/, '')
+      idField.value = dataRemoveLeadingZeros
     }
     return idData
   }
   extractData("")
-  startUp(videoConfig)
+  let userSelectedCamera: MediaDeviceInfo = {deviceId: "", groupId: "", kind: "videoinput", label: "", toJSON: () => {}}
+  $: startUp(videoConfig, userSelectedCamera)
+  let cameraOptions: MediaDeviceInfo[] = []
+  async function setCameraOptions(){
+      let cameras = (await navigator.mediaDevices.enumerateDevices())
+      .filter(device => device.kind === "videoinput")
+    cameraOptions = cameras
+  }
+  $: console.log(userSelectedCamera)
+
 </script>
 {#if !codeFound}
-  <div class="camera" style="height: 90svh;">
-    <video bind:this={video} on:canplay={() => {}} style="object-fit: initial; height: 100%;">
-      Video stream not available.
-    </video>
+  <div style="background-color: white;">
+    <div>Cambiar cámara</div>
+    <select bind:value={userSelectedCamera} placeholder="Cambiar cámara">
+      {#each cameraOptions as cameraOption (cameraOption.deviceId)}
+        <option value={cameraOption}>
+          {cameraOption.label}
+        </option>
+      {/each}
+    </select>
+  </div>
+  <div style="display: flex; flex-direction: row; justify-content: center; max-width: 100svw; height: 90svh;">
+    <div style="max-width: 100svw; max-height: 80svh; position: relative;">
+      <video bind:this={video} on:canplay={() => {}} style="object-fit: initial; width: inherit; height: inherit; max-height: inherit;position: relative;">
+        Video stream not available.
+      </video>
+      <div style="position: absolute; top: 0px; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+        <div style="margin: auto; border-width: 0.2em; border-radius: 1em; border-color: white; border-style: solid; width: {BARCODE_OVERLAY_WIDTH}%; aspect-ratio: {BARCODE_ASPECTRATIO};">
+        </div>
+      </div>
+    </div>
   </div>
 {:else}
   {#each idData as idField (idField.field)}
@@ -134,4 +179,5 @@
     </div>
   {/each}
 {/if}
+{errorPerm}
 <canvas bind:this={cameraPreviewCanvas} style="display: none;"></canvas>
