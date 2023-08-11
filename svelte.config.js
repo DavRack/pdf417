@@ -19,9 +19,6 @@ const config = {
     alias: {
       src: 'src'
     },
-    paths: {
-      base: dev? '' : '/pdf417'
-    }
   },
   ssr: false,
   vitePlugin: {
