@@ -81,12 +81,12 @@
           ...videoConfig,
           deviceId: camera?.deviceId,
         }})
-      n.then(async (stream) => {
+      let stream = await n
       video.srcObject = stream;
       await video.play();
-        })
-    }catch{
-        cameraError = "No se obtuvo permiso de cámara"
+    }catch (e){
+        //cameraError = "No se obtuvo permiso de cámara"
+        cameraError = e.toString()
     }
   }
 
