@@ -1,5 +1,4 @@
 <script lang="ts">
-	//import * as rxing from "rxing-wasm";
 
   export let decodesPerSecond = 1
 
@@ -10,6 +9,7 @@
   const BARCODE_OVERLAY_WIDTH = 90
   let height = 3840;     // This will be computed based on the input stream
   let width = 2160;    // We will scale the photo width to this. UHD horizontal resolution
+
   let codeFound = false
   let error: string
 
@@ -39,7 +39,7 @@
     //displaySurface?: ConstrainDOMString;
     //echoCancellation?: ConstrainBoolean;
     //facingMode: "environment",
-    //frameRate?: ConstrainDouble;
+    frameRate: 30,
     //groupId?: ConstrainDOMString;
     noiseSuppression: false,
     //sampleRate?: ConstrainULong;
@@ -52,36 +52,41 @@
     advanced: [
       {
         ...userVideoConfig,
-        //zoom: 2
+        zoom: 2
       }
     ]
   }
   let timer = setInterval(handleDecode, 1000/decodesPerSecond)
+  let cameraError: null|string
 
-  let errorPerm: null|string
-  async function startUp(videoConfig: MediaTrackConstraints, camera: MediaDeviceInfo){
-    if(!camera.deviceId){
-      try {
+  async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
+    if(!camera?.deviceId){
       let cameras = (await navigator.mediaDevices.enumerateDevices())
-      .filter(device => device.kind === "videoinput")
-      camera = cameras.find(camera => camera.label.includes("back") || camera.label.includes("trasera"))
-      userSelectedCamera = camera
-      }catch{
-        errorPerm = "no se obtuvieron permisos de cámara"
+        .filter(device => device.kind === "videoinput")
+
+      if (cameras.length === 0){
+        cameraError = "No hay cámaras disponibles"
         return
       }
+      camera = cameras.find(camera => camera.label.includes("back") || camera.label.includes("trasera")) || cameras[0]
+      userSelectedCamera = camera
     }
 
-    navigator.mediaDevices
-      .getUserMedia({ audio: false, video: {
-        ...videoConfig,
-        deviceId: camera?.deviceId,
-      }})
-      .then((stream) => {
-        video.srcObject = stream;
-        video.play();
-      })
+    try{
+      navigator.mediaDevices
+        .getUserMedia({ audio: false, video: {
+          ...videoConfig,
+          deviceId: camera?.deviceId,
+        }})
+        .then((stream) => {
+          video.srcObject = stream;
+          video.play();
+        })
+    }catch{
+        cameraError = "No se obtuvo permiso de cámara"
+    }
   }
+
   function takepicture(): ImageData {
     // take a picture of the rectangle of interest for the bar code
 
@@ -120,9 +125,8 @@
       let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
       let text = result.text()
       error = text
-      clearInterval(timer)
       idData = extractData(text)
-      codeFound = true
+      end()
     }catch (e) {
       error = "no se ha encontrado un código, sigue intentando"
       codeFound = false
@@ -152,6 +156,13 @@
     let bytes = Array.from(utf8Encode.encode(string))
     return bytes.join(",")
   }
+
+  function end(){
+      clearInterval(timer)
+      codeFound = true
+      video.pause()
+  }
+
   $: startUp(videoConfig, userSelectedCamera)
 
 </script>
@@ -167,21 +178,24 @@
     </select>
   </div>
   <div style="display: flex; flex-direction: row; justify-content: center; max-width: 100svw; height: 90svh;">
-    {#if errorPerm}
-    <div style="max-width: 100svw; max-height: 80svh; position: relative;">
-      <video
-        playsinline
-        bind:this={video}
-        on:canplay={() => {}}
-        style="object-fit: initial; width: inherit; height: inherit; max-height: inherit;position: relative;"
-      >
-        Video stream not available.
-      </video>
-      <div style="position: absolute; top: 0px; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center;">
-        <div style="margin: auto; border-width: 0.2em; border-radius: 1em; border-color: white; border-style: solid; width: {BARCODE_OVERLAY_WIDTH}%; aspect-ratio: {BARCODE_ASPECTRATIO};">
+    {#if cameraError}
+      <p>{cameraError}</p>
+    {:else}
+      <div style="max-width: 100svw; max-height: 80svh; position: relative;">
+        <video
+          playsinline
+          bind:this={video}
+          on:canplay={() => {}}
+          style="object-fit: initial; width: inherit; height: inherit; max-height: inherit;position: relative;"
+        >
+          Video stream not available.
+        </video>
+        <div style="position: absolute; top: 0px; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+          <div style="margin: auto; border-width: 0.2em; border-radius: 1em; border-color: white; border-style: solid; width: {BARCODE_OVERLAY_WIDTH}%; aspect-ratio: {BARCODE_ASPECTRATIO};">
+          </div>
         </div>
       </div>
-    </div>
+    {/if}
   </div>
 {:else}
   {#each idData as idField (idField.field)}
