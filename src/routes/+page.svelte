@@ -164,7 +164,7 @@
   <div style="display: flex; flex-direction: row; justify-content: center; max-width: 100svw; height: 90svh;">
     <div style="max-width: 100svw; max-height: 80svh; position: relative;">
       <video
-        autoplay muted playsinline
+        playsinline
         bind:this={video}
         on:canplay={() => {}}
         style="object-fit: initial; width: inherit; height: inherit; max-height: inherit;position: relative;"
