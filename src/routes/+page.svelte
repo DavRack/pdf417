@@ -1,6 +1,6 @@
 <script lang="ts">
 
-  export let decodesPerSecond = 2
+  export let decodesPerSecond = 5
 
   let cameraPreviewCanvas: HTMLCanvasElement
   let video: HTMLVideoElement
