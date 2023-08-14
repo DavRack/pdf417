@@ -75,11 +75,14 @@
       userSelectedCamera = camera
     }
 
-      navigator.mediaDevices
-      .getUserMedia({ audio: false, video: {
-        ...videoConfig,
-        deviceId: camera?.deviceId,
-      }}).then(async (stream) =>{
+    navigator.mediaDevices
+      .getUserMedia({
+        audio: false,
+        video: {
+          ...videoConfig,
+          deviceId: camera?.deviceId,
+        }
+      }).then(async (stream) =>{
         video.srcObject = stream;
         await video.play();
       }).catch((e) => {
