@@ -56,7 +56,7 @@
     advanced: [
       {
         ...userVideoConfig,
-        zoom: 2
+        zoom: 1
       }
     ]
   }
@@ -82,7 +82,7 @@
           ...videoConfig,
           deviceId: camera?.deviceId,
         }
-      }).then(async (stream) => {
+      }).then((stream) => {
         video.srcObject = stream
         video.play()
       }).catch((e) => {
