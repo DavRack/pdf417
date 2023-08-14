@@ -12,6 +12,10 @@
 
   let codeFound = false
   let error: string
+  let cameraError: null|string
+
+  let userSelectedCamera: MediaDeviceInfo = {deviceId: "", groupId: "", kind: "videoinput", label: "", toJSON: () => {}}
+  let cameraOptions: MediaDeviceInfo[] = []
 
 
   let idData = [
@@ -57,7 +61,6 @@
     ]
   }
   let timer = setInterval(handleDecode, 1000/decodesPerSecond)
-  let cameraError: null|string
 
   async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
     if(!camera?.deviceId){
@@ -73,15 +76,13 @@
     }
 
     try{
-      navigator.mediaDevices
+      let n = await navigator.mediaDevices
         .getUserMedia({ audio: false, video: {
           ...videoConfig,
           deviceId: camera?.deviceId,
         }})
-        .then((stream) => {
-          video.srcObject = stream;
-          video.play();
-        })
+      video.srcObject = n;
+      await video.play();
     }catch{
         cameraError = "No se obtuvo permiso de cámara"
     }
@@ -123,7 +124,10 @@
       let imageData = takepicture()
       const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
       let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
-      let text = result.text()
+      const buffer = require('buffer');
+      const latin1Buffer = buffer.transcode(Buffer.from(result.text()), "utf8", "latin1");
+      const text = latin1Buffer.toString("latin1");
+
       error = text
       idData = extractData(text)
       end()
@@ -144,8 +148,6 @@
     }
     return idData
   }
-  let userSelectedCamera: MediaDeviceInfo = {deviceId: "", groupId: "", kind: "videoinput", label: "", toJSON: () => {}}
-  let cameraOptions: MediaDeviceInfo[] = []
   async function setCameraOptions(){
       let cameras = (await navigator.mediaDevices.enumerateDevices())
       .filter(device => device.kind === "videoinput")
@@ -154,7 +156,7 @@
   function stringToBytes(string: string){
     let utf8Encode = new TextEncoder();
     let bytes = Array.from(utf8Encode.encode(string))
-    return bytes.map(byte => byte.toString(16).padStart(2,'0')).join(",")
+    return bytes.map(byte => byte.toString(16).padStart(2,'0')).join("")
   }
 
   function end(){
