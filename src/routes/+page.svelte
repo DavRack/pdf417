@@ -124,13 +124,16 @@
     let hints = new rxing.DecodeHintDictionary()
     hints.set_hint(rxing.DecodeHintTypes.PossibleFormats, `Pdf417`)
     hints.set_hint(rxing.DecodeHintTypes.TryHarder, `true`)
+    let imageData = takepicture()
+    const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
     try {
-      let imageData = takepicture()
-      const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
+      let t2 = Date.now()
       //let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
       let result = rxing.decode_barcode(luma_data, video.videoWidth, video.videoHeight)
       let text = result.text()
+      let t3 = Date.now()
 
+      console.log("exec time: ",t3-t2)
       error = text
       idData = extractData(text)
       end()
@@ -138,8 +141,8 @@
       error = "no se ha encontrado un código, sigue intentando"
       codeFound = false
     }
-    let t2 = Date.now()
-    console.log("exec time: ",t2-t1)
+    let t4 = Date.now()
+    console.log("exec time2: ",t4-t1)
   }
   let rawIdString = ""
   function extractData(rawString: string){
