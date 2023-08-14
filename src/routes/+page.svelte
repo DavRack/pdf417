@@ -163,7 +163,12 @@
   </div>
   <div style="display: flex; flex-direction: row; justify-content: center; max-width: 100svw; height: 90svh;">
     <div style="max-width: 100svw; max-height: 80svh; position: relative;">
-      <video bind:this={video} on:canplay={() => {}} style="object-fit: initial; width: inherit; height: inherit; max-height: inherit;position: relative;">
+      <video
+        autoplay muted playsinline
+        bind:this={video}
+        on:canplay={() => {}}
+        style="object-fit: initial; width: inherit; height: inherit; max-height: inherit;position: relative;"
+      >
         Video stream not available.
       </video>
       <div style="position: absolute; top: 0px; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center;">
