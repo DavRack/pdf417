@@ -84,9 +84,7 @@
         }
       }).then(async (stream) => {
         video.srcObject = stream
-        video.play().catch((e) => {
-          cameraError = e.toString()
-        })
+        video.play()
       }).catch((e) => {
         //cameraError = "No se obtuvo permiso de cámara"
         cameraError = e.toString()
