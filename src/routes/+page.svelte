@@ -76,13 +76,15 @@
     }
 
     try{
-      let n = await navigator.mediaDevices
+      let n = navigator.mediaDevices
         .getUserMedia({ audio: false, video: {
           ...videoConfig,
           deviceId: camera?.deviceId,
         }})
-      video.srcObject = n;
+      n.then(async (stream) => {
+      video.srcObject = stream;
       await video.play();
+        })
     }catch{
         cameraError = "No se obtuvo permiso de cámara"
     }
