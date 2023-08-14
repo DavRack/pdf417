@@ -3,82 +3,82 @@
 
 
 
-  export let decodesPerSecond = 5
+export let decodesPerSecond = 5
 
-  let cameraPreviewCanvas: HTMLCanvasElement
-  let video: HTMLVideoElement
+let cameraPreviewCanvas: HTMLCanvasElement
+let video: HTMLVideoElement
 
-  const BARCODE_ASPECTRATIO = 5
-  const BARCODE_OVERLAY_WIDTH = 90
-  let height = 3840;     // This will be computed based on the input stream
-  let width = 2160;    // We will scale the photo width to this. UHD horizontal resolution
+const BARCODE_ASPECTRATIO = 5
+const BARCODE_OVERLAY_WIDTH = 90
+let height = 3840;     // This will be computed based on the input stream
+let width = 2160;    // We will scale the photo width to this. UHD horizontal resolution
 
-  let codeFound = false
-  let error: string
-  let cameraError: null|string
+let codeFound = false
+let error: string
+let cameraError: null|string
 
-  let userSelectedCamera: MediaDeviceInfo = {deviceId: "", groupId: "", kind: "videoinput", label: "", toJSON: () => {}}
-  let cameraOptions: MediaDeviceInfo[] = []
+let userSelectedCamera: MediaDeviceInfo = {deviceId: "", groupId: "", kind: "videoinput", label: "", toJSON: () => {}}
+let cameraOptions: MediaDeviceInfo[] = []
 
 
-  let idData = [
-    {label: "Primer Nómbre", value: "", field:"firstName", position: [104, 127]},
-    {label: "Segundo nombre", value: "", field:"middleName", position: [127, 150]},
-    {label: "Primer Apellido", value: "", field:"lastName", position: [58, 81]},
-    {label: "Segundo Apellido", value: "", field:"secondLastName", position: [81, 104]},
-    {label: "Número documento", value: "", field:"documentNumber", position: [48,58]},
-    {label: "Genero", value: "", field:"gender", position: [151, 152]},
-    {label: "Día nacimiento", value: "", field:"birthdayDay", position: [158, 160]},
-    {label: "Mes nacimiento", value: "", field:"birthdayMonth", position: [156, 158]},
-    {label: "Año nacimiento", value: "", field:"birthdayYear", position: [152, 156]},
-    {label: "Tipo de sangre", value: "", field:"bloodType", position: [166, 168]},
-    {label: "Código de departamento", value: "", field:"departmentCode", position: [160, 162]},
-    {label: "Código municipio", value: "", field:"municipalityCode", position: [162, 165]},
-    {label: "Código afis", value: "", field:"afisCode", position: [0, 24]},
-    {label: "Finger Card", value: "", field:"fingerCard", position: [40, 48]},
-  ]
+let idData = [
+  {label: "Primer Nómbre", value: "", field:"firstName", position: [104, 127]},
+  {label: "Segundo nombre", value: "", field:"middleName", position: [127, 150]},
+  {label: "Primer Apellido", value: "", field:"lastName", position: [58, 81]},
+  {label: "Segundo Apellido", value: "", field:"secondLastName", position: [81, 104]},
+  {label: "Número documento", value: "", field:"documentNumber", position: [48,58]},
+  {label: "Genero", value: "", field:"gender", position: [151, 152]},
+  {label: "Día nacimiento", value: "", field:"birthdayDay", position: [158, 160]},
+  {label: "Mes nacimiento", value: "", field:"birthdayMonth", position: [156, 158]},
+  {label: "Año nacimiento", value: "", field:"birthdayYear", position: [152, 156]},
+  {label: "Tipo de sangre", value: "", field:"bloodType", position: [166, 168]},
+  {label: "Código de departamento", value: "", field:"departmentCode", position: [160, 162]},
+  {label: "Código municipio", value: "", field:"municipalityCode", position: [162, 165]},
+  {label: "Código afis", value: "", field:"afisCode", position: [0, 24]},
+  {label: "Finger Card", value: "", field:"fingerCard", position: [40, 48]},
+]
 
-  const userVideoConfig = {
-    //aspectRatio: ID_BARCODE_ASPECTRATIO,
-    autoGainControl: false,
-    //channelCount?: ConstrainULong;
-    //deviceId?: ConstrainDOMString;
-    //displaySurface?: ConstrainDOMString;
-    //echoCancellation?: ConstrainBoolean;
-    //facingMode: "environment",
-    frameRate: 30,
-    //groupId?: ConstrainDOMString;
-    noiseSuppression: false,
-    //sampleRate?: ConstrainULong;
-    //sampleSize?: ConstrainULong;
-    width: height,
-    height: width,
-  }
+const userVideoConfig = {
+  //aspectRatio: ID_BARCODE_ASPECTRATIO,
+  autoGainControl: false,
+  //channelCount?: ConstrainULong;
+  //deviceId?: ConstrainDOMString;
+  //displaySurface?: ConstrainDOMString;
+  //echoCancellation?: ConstrainBoolean;
+  //facingMode: "environment",
+  frameRate: 30,
+  //groupId?: ConstrainDOMString;
+  noiseSuppression: false,
+  //sampleRate?: ConstrainULong;
+  //sampleSize?: ConstrainULong;
+  width: height,
+  height: width,
+}
 
-  const videoConfig:MediaTrackConstraints = {
-    advanced: [
-      {
-        ...userVideoConfig,
-        zoom: 1
-      }
-    ]
-  }
-  let timer = setInterval(handleDecode, 1000/decodesPerSecond)
-
-  async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
-    if(!camera?.deviceId){
-      let cameras = (await navigator.mediaDevices.enumerateDevices())
-        .filter(device => device.kind === "videoinput")
-
-      if (cameras.length === 0){
-        cameraError = "No hay cámaras disponibles"
-        return
-      }
-      camera = cameras.find(camera => camera.label.includes("back") || camera.label.includes("trasera")) || cameras[0]
-      userSelectedCamera = camera
+const videoConfig:MediaTrackConstraints = {
+  advanced: [
+    {
+      ...userVideoConfig,
+      zoom: 1
     }
+  ]
+}
+let timer = setInterval(handleDecode, 1000/decodesPerSecond)
 
-    navigator.mediaDevices
+async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
+  if(!camera?.deviceId){
+    let cameras = (await navigator.mediaDevices.enumerateDevices())
+      .filter(device => device.kind === "videoinput")
+
+    if (cameras.length === 0){
+      cameraError = "No hay cámaras disponibles"
+      return
+    }
+    camera = cameras.find(camera => camera.label.includes("back") || camera.label.includes("trasera")) || cameras[0]
+    userSelectedCamera = camera
+  }
+
+  navigator.mediaDevices
       .getUserMedia({
         audio: false,
         video: {
@@ -127,13 +127,12 @@
     let hints = new rxing.DecodeHintDictionary()
     hints.set_hint(rxing.DecodeHintTypes.PossibleFormats, `Pdf417`)
     hints.set_hint(rxing.DecodeHintTypes.TryHarder, `true`)
-    takepicture()
-    let imageData = await getBarcodeImage(cameraPreviewCanvas)
+    let imageData = takepicture()
+    //let imageData = await getBarcodeImage(cameraPreviewCanvas)
     const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
     try {
       let t2 = Date.now()
-      //let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
-      let result = rxing.decode_barcode(luma_data, video.videoWidth, video.videoHeight)
+      let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
       let text = result.text()
       let t3 = Date.now()
 
@@ -222,4 +221,4 @@
   {/each}
 {/if}
 {rawIdString}
-<canvas bind:this={cameraPreviewCanvas} style=""></canvas>
+<canvas bind:this={cameraPreviewCanvas} style="display: none;"></canvas>
