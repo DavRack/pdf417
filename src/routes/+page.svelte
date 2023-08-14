@@ -138,7 +138,6 @@
       end()
     }catch (e) {
       error = "no se ha encontrado un código, sigue intentando"
-      console.log(error, e)
       codeFound = false
     }
   }
