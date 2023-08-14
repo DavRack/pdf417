@@ -123,9 +123,9 @@
       codeFound = false
     }
   }
-  let error2 = ""
+  let rawIdString = ""
   function extractData(rawString: string){
-    error2 = rawString
+    rawIdString = rawString
     // convert to hex bytes
     //let hexText = byteArray.map(byte => byte.toString(16).padStart(2,'0')).join('')
     //error = hexText
@@ -184,5 +184,5 @@
     </div>
   {/each}
 {/if}
-{errorPerm}
+{rawIdString}
 <canvas bind:this={cameraPreviewCanvas} style="display: none;"></canvas>
