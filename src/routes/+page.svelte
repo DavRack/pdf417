@@ -58,13 +58,18 @@
   }
   let timer = setInterval(handleDecode, 1000/decodesPerSecond)
 
-  let errorPerm = ""
+  let errorPerm: null|string
   async function startUp(videoConfig: MediaTrackConstraints, camera: MediaDeviceInfo){
     if(!camera.deviceId){
+      try {
       let cameras = (await navigator.mediaDevices.enumerateDevices())
       .filter(device => device.kind === "videoinput")
       camera = cameras.find(camera => camera.label.includes("back") || camera.label.includes("trasera"))
       userSelectedCamera = camera
+      }catch{
+        errorPerm = "no se obtuvieron permisos de cámara"
+        return
+      }
     }
 
     navigator.mediaDevices
@@ -125,10 +130,7 @@
   }
   let rawIdString = ""
   function extractData(rawString: string){
-    rawIdString = rawString
-    // convert to hex bytes
-    //let hexText = byteArray.map(byte => byte.toString(16).padStart(2,'0')).join('')
-    //error = hexText
+    rawIdString = stringToBytes(rawString)
     for (let i = 0;i<idData.length; i++){
       let idField = idData[i]
       let data = rawString.slice(...idField.position);
@@ -138,16 +140,19 @@
     }
     return idData
   }
-  extractData("")
   let userSelectedCamera: MediaDeviceInfo = {deviceId: "", groupId: "", kind: "videoinput", label: "", toJSON: () => {}}
-  $: startUp(videoConfig, userSelectedCamera)
   let cameraOptions: MediaDeviceInfo[] = []
   async function setCameraOptions(){
       let cameras = (await navigator.mediaDevices.enumerateDevices())
       .filter(device => device.kind === "videoinput")
     cameraOptions = cameras
   }
-  $: console.log(userSelectedCamera)
+  function stringToBytes(string: string){
+    let utf8Encode = new TextEncoder();
+    let bytes = Array.from(utf8Encode.encode(string))
+    return bytes.join(",")
+  }
+  $: startUp(videoConfig, userSelectedCamera)
 
 </script>
 {#if !codeFound}
@@ -162,6 +167,7 @@
     </select>
   </div>
   <div style="display: flex; flex-direction: row; justify-content: center; max-width: 100svw; height: 90svh;">
+    {#if errorPerm}
     <div style="max-width: 100svw; max-height: 80svh; position: relative;">
       <video
         playsinline
