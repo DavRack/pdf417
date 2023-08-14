@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { getBarcodeImage } from "./imageManipulation";
+
+
 
   export let decodesPerSecond = 5
 
@@ -124,7 +127,8 @@
     let hints = new rxing.DecodeHintDictionary()
     hints.set_hint(rxing.DecodeHintTypes.PossibleFormats, `Pdf417`)
     hints.set_hint(rxing.DecodeHintTypes.TryHarder, `true`)
-    let imageData = takepicture()
+    takepicture()
+    let imageData = await getBarcodeImage(cameraPreviewCanvas)
     const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
     try {
       let t2 = Date.now()
@@ -144,6 +148,7 @@
     let t4 = Date.now()
     console.log("exec time2: ",t4-t1)
   }
+
   let rawIdString = ""
   function extractData(rawString: string){
     rawIdString = stringToBytes(rawString)
@@ -217,4 +222,4 @@
   {/each}
 {/if}
 {rawIdString}
-<canvas bind:this={cameraPreviewCanvas} style="display: none;"></canvas>
+<canvas bind:this={cameraPreviewCanvas} style=""></canvas>
