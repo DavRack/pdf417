@@ -82,9 +82,11 @@
           ...videoConfig,
           deviceId: camera?.deviceId,
         }
-      }).then(async (stream) =>{
-        video.srcObject = stream;
-        video.play();
+      }).then((stream) =>{
+        video.srcObject = stream
+        video.play().catch((e) => {
+          cameraError = e.toString()
+        })
       }).catch((e) => {
         //cameraError = "No se obtuvo permiso de cámara"
         cameraError = e.toString()
