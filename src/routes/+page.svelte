@@ -119,7 +119,7 @@
   }
 
   async function handleDecode(){
-    setCameraOptions()
+    let t1 = Date.now()
     let rxing = await import("rxing-wasm")
     let hints = new rxing.DecodeHintDictionary()
     hints.set_hint(rxing.DecodeHintTypes.PossibleFormats, `Pdf417`)
@@ -127,10 +127,6 @@
       let imageData = takepicture()
       const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
       let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
-
-      //const buffer = require('buffer');
-      //const latin1Buffer = buffer.transcode(Buffer.from(result.text()), "utf8", "latin1");
-      //const text = latin1Buffer.toString("latin1");
       let text = result.text()
 
       error = text
@@ -140,6 +136,8 @@
       error = "no se ha encontrado un código, sigue intentando"
       codeFound = false
     }
+    let t2 = Date.now()
+    console.log("exec time: ",t2-t1)
   }
   let rawIdString = ""
   function extractData(rawString: string){
@@ -171,6 +169,8 @@
   }
 
   $: startUp(videoConfig, userSelectedCamera)
+   
+  setCameraOptions()
 
 </script>
 {#if !codeFound}
