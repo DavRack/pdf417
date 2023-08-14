@@ -82,7 +82,7 @@
           ...videoConfig,
           deviceId: camera?.deviceId,
         }
-      }).then((stream) =>{
+      }).then(async (stream) => {
         video.srcObject = stream
         video.play().catch((e) => {
           cameraError = e.toString()
