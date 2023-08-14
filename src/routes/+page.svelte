@@ -154,7 +154,7 @@
   function stringToBytes(string: string){
     let utf8Encode = new TextEncoder();
     let bytes = Array.from(utf8Encode.encode(string))
-    return bytes.map(byte => byte.toString(16)).join(",")
+    return bytes.map(byte => byte.toString(16).padStart(2,'0')).join(",")
   }
 
   function end(){
