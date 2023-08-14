@@ -126,7 +126,8 @@
     try {
       let imageData = takepicture()
       const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
-      let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
+      //let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
+      let result = rxing.decode_barcode(luma_data, video.videoWidth, video.videoHeight)
       let text = result.text()
 
       error = text
