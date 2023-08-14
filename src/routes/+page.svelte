@@ -75,19 +75,17 @@
       userSelectedCamera = camera
     }
 
-    try{
-      await navigator.mediaDevices
+      navigator.mediaDevices
       .getUserMedia({ audio: false, video: {
         ...videoConfig,
         deviceId: camera?.deviceId,
       }}).then(async (stream) =>{
         video.srcObject = stream;
         await video.play();
-      })
-    }catch (e){
+      }).catch((e) => {
         //cameraError = "No se obtuvo permiso de cámara"
         cameraError = e.toString()
-    }
+      })
   }
 
   function takepicture(): ImageData {
