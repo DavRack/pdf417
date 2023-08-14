@@ -1,6 +1,6 @@
 <script lang="ts">
 
-  export let decodesPerSecond = 3
+  export let decodesPerSecond = 2
 
   let cameraPreviewCanvas: HTMLCanvasElement
   let video: HTMLVideoElement
@@ -127,9 +127,11 @@
       let imageData = takepicture()
       const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
       let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
-      const buffer = require('buffer');
-      const latin1Buffer = buffer.transcode(Buffer.from(result.text()), "utf8", "latin1");
-      const text = latin1Buffer.toString("latin1");
+
+      //const buffer = require('buffer');
+      //const latin1Buffer = buffer.transcode(Buffer.from(result.text()), "utf8", "latin1");
+      //const text = latin1Buffer.toString("latin1");
+      let text = result.text()
 
       error = text
       idData = extractData(text)
