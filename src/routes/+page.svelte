@@ -123,6 +123,7 @@
     let rxing = await import("rxing-wasm")
     let hints = new rxing.DecodeHintDictionary()
     hints.set_hint(rxing.DecodeHintTypes.PossibleFormats, `Pdf417`)
+    hints.set_hint(rxing.DecodeHintTypes.TryHarder, `true`)
     try {
       let imageData = takepicture()
       const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
