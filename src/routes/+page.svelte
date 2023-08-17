@@ -65,7 +65,6 @@ const videoConfig:MediaTrackConstraints = {
 }
 
 async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
-  await setCameraOptions()
   if(!camera?.deviceId){
     let cameras = (await navigator.mediaDevices.enumerateDevices())
       .filter(device => device.kind === "videoinput")
@@ -184,9 +183,9 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
   $: if (appState === "videoInitialized"){
     timer = setInterval(handleDecode, 1000/decodesPerSecond)
   }
+  setCameraOptions()
   $: startUp(videoConfig, userSelectedCamera)
-   
-
+  $: console.log(videoConfig, userSelectedCamera)
 </script>
 {#if appState === "notStarted"}
   <p>accediendo a la cámara<p/>
