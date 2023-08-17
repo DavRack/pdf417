@@ -70,6 +70,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     let cameras = (await navigator.mediaDevices.enumerateDevices())
       .filter(device => device.kind === "videoinput")
 
+    console.log(cameras)
     if (cameras.length === 0){
       cameraError = "No hay cámaras disponibles"
       return
@@ -184,7 +185,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
   $: if (appState === "videoInitialized"){
     timer = setInterval(handleDecode, 1000/decodesPerSecond)
   }
-  startUp(videoConfig, userSelectedCamera)
+  startUp(videoConfig)
   console.log(videoConfig, userSelectedCamera)
 </script>
 {#if appState === "notStarted"}
