@@ -3,7 +3,7 @@
 
 
 
-export let decodesPerSecond = 2
+export let decodesPerSecond = 3
 
 let cameraPreviewCanvas: HTMLCanvasElement
 let video: HTMLVideoElement
@@ -193,7 +193,10 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
   setCameraOptions()
 
 </script>
-{#if appState !== "codeFound"}
+{#if appState === "notStarted"}
+  <p>accediendo a la cámara<p/>
+{/if}
+{#if appState === "videoInitialized"}
   <div style="background-color: white;">
     <div>Cambiar cámara</div>
     <select bind:value={userSelectedCamera} placeholder="Cambiar cámara">
@@ -204,6 +207,8 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
       {/each}
     </select>
   </div>
+{/if}
+{#if appState !== "codeFound"}
   <div style="display: flex; flex-direction: row; justify-content: center; max-width: 100svw; height: 90svh;">
     {#if cameraError}
       <p>{cameraError}</p>
