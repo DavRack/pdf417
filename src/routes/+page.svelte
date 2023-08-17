@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { getBarcodeImage } from "./imageManipulation";
+//import { getBarcodeImage } from "./imageManipulation";
 
 
 
-export let decodesPerSecond = 5
+export let decodesPerSecond = 2
 
 let cameraPreviewCanvas: HTMLCanvasElement
 let video: HTMLVideoElement
@@ -13,7 +13,7 @@ const BARCODE_OVERLAY_WIDTH = 90
 let height = 3840;     // This will be computed based on the input stream
 let width = 2160;    // We will scale the photo width to this. UHD horizontal resolution
 
-let codeFound = false
+let appState: "notStarted"|"videoInitialized"|"codeFound" = "notStarted"
 let error: string
 let cameraError: null|string
 
@@ -63,7 +63,6 @@ const videoConfig:MediaTrackConstraints = {
     }
   ]
 }
-let timer = setInterval(handleDecode, 1000/decodesPerSecond)
 
 async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
   if(!camera?.deviceId){
@@ -78,7 +77,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     userSelectedCamera = camera
   }
 
-  navigator.mediaDevices
+  await navigator.mediaDevices
       .getUserMedia({
         audio: false,
         video: {
@@ -87,14 +86,21 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
         }
       }).then((stream) => {
         video.srcObject = stream
-        video.play()
       }).catch((e) => {
         //cameraError = "No se obtuvo permiso de cámara"
         cameraError = e.toString()
       })
+
+  try{
+  await video.play()
+    console.log("video play good")
+    appState = "videoInitialized"
+  }catch{
+    console.log("video play bad")
+  }
   }
 
-  function takepicture(): ImageData {
+  function takepicture(video: HTMLVideoElement): ImageData {
     // take a picture of the rectangle of interest for the bar code
 
     // get the size and offset for the interest rectangle
@@ -127,7 +133,10 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     let hints = new rxing.DecodeHintDictionary()
     hints.set_hint(rxing.DecodeHintTypes.PossibleFormats, `Pdf417`)
     hints.set_hint(rxing.DecodeHintTypes.TryHarder, `true`)
-    let imageData = takepicture()
+    if (!video){
+    return
+  }
+    let imageData = takepicture(video)
     //let imageData = await getBarcodeImage(cameraPreviewCanvas)
     const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
     try {
@@ -139,13 +148,11 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
       console.log("exec time: ",t3-t2)
       error = text
       idData = extractData(text)
-      end()
+      codeFound()
     }catch (e) {
       error = "no se ha encontrado un código, sigue intentando"
-      codeFound = false
     }
     let t4 = Date.now()
-    console.log("exec time2: ",t4-t1)
   }
 
   let rawIdString = ""
@@ -171,18 +178,22 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     return bytes.map(byte => byte.toString(16).padStart(2,'0')).join("")
   }
 
-  function end(){
+  function codeFound(){
       clearInterval(timer)
-      codeFound = true
+      appState = "codeFound"
       video.pause()
   }
 
+  let timer: ReturnType<typeof setTimeout>
+  $: if (appState === "videoInitialized"){
+    timer = setInterval(handleDecode, 1000/decodesPerSecond)
+  }
   $: startUp(videoConfig, userSelectedCamera)
    
   setCameraOptions()
 
 </script>
-{#if !codeFound}
+{#if appState !== "codeFound"}
   <div style="background-color: white;">
     <div>Cambiar cámara</div>
     <select bind:value={userSelectedCamera} placeholder="Cambiar cámara">
@@ -213,12 +224,15 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
       </div>
     {/if}
   </div>
-{:else}
+{:else if appState === "codeFound"}
   {#each idData as idField (idField.field)}
     <div>
       <b>{idField.label}:</b>  <span>{idField.value}</span>
     </div>
   {/each}
 {/if}
-{rawIdString}
+{#if rawIdString}
+  <p>Hex data:</p>
+  {rawIdString}
+{/if}
 <canvas bind:this={cameraPreviewCanvas} style="display: none;"></canvas>
