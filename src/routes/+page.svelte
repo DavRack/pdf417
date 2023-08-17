@@ -213,7 +213,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
           playsinline
           bind:this={video}
           on:canplay={() => {}}
-          style="object-fit: initial; width: inherit; height: inherit; max-height: inherit;position: relative;"
+          style="object-fit: initial; width: 100%; height: 100%; position: absolute;"
         >
           Video stream not available.
         </video>
