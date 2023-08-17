@@ -65,6 +65,7 @@ const videoConfig:MediaTrackConstraints = {
 }
 
 async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
+  setCameraOptions()
   if(!camera?.deviceId){
     let cameras = (await navigator.mediaDevices.enumerateDevices())
       .filter(device => device.kind === "videoinput")
@@ -77,27 +78,22 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     userSelectedCamera = camera
   }
 
-  await navigator.mediaDevices
+  video.srcObject = await navigator.mediaDevices
       .getUserMedia({
         audio: false,
         video: {
           ...videoConfig,
           deviceId: camera?.deviceId,
         }
-      }).then((stream) => {
-        video.srcObject = stream
-      }).catch((e) => {
-        //cameraError = "No se obtuvo permiso de cámara"
-        cameraError = e.toString()
       })
 
-  try{
-  await video.play()
-    console.log("video play good")
-    appState = "videoInitialized"
-  }catch{
-    console.log("video play bad")
-  }
+    try{
+      await video.play()
+      console.log("video play good")
+      appState = "videoInitialized"
+    }catch{
+      console.log("video play bad")
+    }
   }
 
   function takepicture(video: HTMLVideoElement): ImageData {
@@ -190,7 +186,6 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
   }
   $: startUp(videoConfig, userSelectedCamera)
    
-  setCameraOptions()
 
 </script>
 {#if appState === "notStarted"}
