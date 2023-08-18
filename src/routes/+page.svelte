@@ -45,7 +45,7 @@ const userVideoConfig = {
   //deviceId?: ConstrainDOMString;
   //displaySurface?: ConstrainDOMString;
   //echoCancellation?: ConstrainBoolean;
-  //facingMode: "environment",
+  facingMode: "environment",
   frameRate: 30,
   //groupId?: ConstrainDOMString;
   noiseSuppression: false,
