@@ -65,7 +65,6 @@ const videoConfig:MediaTrackConstraints = {
 }
 
 async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
-  await setCameraOptions()
   if(!camera?.deviceId){
     let cameras = (await navigator.mediaDevices.enumerateDevices())
       .filter(device => device.kind === "videoinput")
@@ -93,6 +92,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
       await video.play()
       console.log("video play good")
       appState = "videoInitialized"
+      await setCameraOptions()
     }catch{
       console.log("video play bad")
     }
