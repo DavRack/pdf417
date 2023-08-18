@@ -195,7 +195,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
 {#if appState === "videoInitialized"}
   <div style="background-color: white;">
     <div>Cambiar cámara</div>
-    <select bind:value={userSelectedCamera} placeholder="Cambiar cámara">
+    <select bind:value={userSelectedCamera} on:change={() => startUp(videoConfig,userSelectedCamera)}>
       {#each cameraOptions as cameraOption (cameraOption.deviceId)}
         <option value={cameraOption}>
           {cameraOption.label}
