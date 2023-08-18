@@ -71,6 +71,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
       .filter(device => device.kind === "videoinput")
 
     console.log(cameras)
+    rawIdString = JSON.stringify(cameras)
     if (cameras.length === 0){
       cameraError = "No hay cámaras disponibles"
       return
