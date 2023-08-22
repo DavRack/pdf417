@@ -64,7 +64,24 @@ const videoConfig:MediaTrackConstraints = {
   ]
 }
 
+
 async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
+  console.info("p1")
+  // we use this to ask for camera permission
+  try{
+    await navigator.mediaDevices.getUserMedia({ audio: false, video: true })
+  }catch{
+    console.log("cant get camera permission")
+    return
+  }
+  console.log("p2")
+
+  // we check for camera permissions
+  let permission = await navigator.permissions.query({name: "camera"})
+  if (permission.state !== "granted"){
+    return
+  }
+
   if(!camera?.deviceId){
     let cameras = (await navigator.mediaDevices.enumerateDevices())
       .filter(device => device.kind === "videoinput")
@@ -78,6 +95,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     camera = cameras.find(camera => camera.label.includes("back") || camera.label.includes("trasera")) || cameras[0]
     userSelectedCamera = camera
   }
+  console.log(userSelectedCamera)
 
   video.srcObject = await navigator.mediaDevices
       .getUserMedia({
@@ -187,7 +205,6 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     timer = setInterval(handleDecode, 1000/decodesPerSecond)
   }
   startUp(videoConfig)
-  console.log(videoConfig, userSelectedCamera)
 </script>
 {#if appState === "notStarted"}
   <p>accediendo a la cámara<p/>
