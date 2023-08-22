@@ -76,13 +76,6 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
   }
   console.log("p1")
 
-  // we check for camera permissions
-  let permission = await navigator.permissions.query({name: "camera"})
-  if (permission.state !== "granted"){
-    return
-  }
-  console.log("p2")
-  permissionsVideo.getVideoTracks().forEach(track => track.stop())
   await setCameraOptions()
 
   console.log("p3")
