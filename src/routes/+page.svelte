@@ -66,15 +66,13 @@ const videoConfig:MediaTrackConstraints = {
 
 
 async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
-  console.info("p1")
   // we use this to ask for camera permission
   try{
     await navigator.mediaDevices.getUserMedia({ audio: false, video: true })
   }catch{
-    console.log("cant get camera permission")
+    console.info("cant get camera permission")
     return
   }
-  console.log("p2")
 
   // we check for camera permissions
   let permission = await navigator.permissions.query({name: "camera"})
@@ -84,9 +82,8 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
 
   if(!camera?.deviceId){
     let cameras = (await navigator.mediaDevices.enumerateDevices())
-      .filter(device => device.kind === "videoinput")
+    .filter(device => device.kind === "videoinput")
 
-    console.log(cameras)
     rawIdString = JSON.stringify(cameras)
     if (cameras.length === 0){
       cameraError = "No hay cámaras disponibles"
@@ -95,116 +92,115 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     camera = cameras.find(camera => camera.label.includes("back") || camera.label.includes("trasera")) || cameras[0]
     userSelectedCamera = camera
   }
-  console.log(userSelectedCamera)
 
   video.srcObject = await navigator.mediaDevices
-      .getUserMedia({
-        audio: false,
-        video: {
-          ...videoConfig,
-          deviceId: camera?.deviceId,
-        }
-      })
+    .getUserMedia({
+      audio: false,
+      video: {
+        ...videoConfig,
+        deviceId: camera?.deviceId,
+      }
+    })
 
-    try{
-      await video.play()
-      console.log("video play good")
-      appState = "videoInitialized"
-      await setCameraOptions()
-    }catch{
-      console.log("video play bad")
-    }
+  try{
+    await video.play()
+    console.log("video play good")
+    appState = "videoInitialized"
+    await setCameraOptions()
+  }catch{
+    console.log("video play bad")
   }
+}
 
-  function takepicture(video: HTMLVideoElement): ImageData {
-    // take a picture of the rectangle of interest for the bar code
+function takepicture(video: HTMLVideoElement): ImageData {
+  // take a picture of the rectangle of interest for the bar code
 
-    // get the size and offset for the interest rectangle
-    let barcodeWidthPercent = (BARCODE_OVERLAY_WIDTH/100)
-    let barcodeWidth = video.videoWidth*barcodeWidthPercent
-    let barcodeHeight = barcodeWidth/(BARCODE_ASPECTRATIO)
-    let barcodeYOffset = (video.videoHeight/2)-(barcodeHeight/2)
-    let barcodeXOffset = ((1-barcodeWidthPercent)/2)*video.videoWidth
+  // get the size and offset for the interest rectangle
+  let barcodeWidthPercent = (BARCODE_OVERLAY_WIDTH/100)
+  let barcodeWidth = video.videoWidth*barcodeWidthPercent
+  let barcodeHeight = barcodeWidth/(BARCODE_ASPECTRATIO)
+  let barcodeYOffset = (video.videoHeight/2)-(barcodeHeight/2)
+  let barcodeXOffset = ((1-barcodeWidthPercent)/2)*video.videoWidth
 
-    // apply the barcode size to canvas
-    cameraPreviewCanvas.width = barcodeWidth
-    cameraPreviewCanvas.height = barcodeHeight
+  // apply the barcode size to canvas
+  cameraPreviewCanvas.width = barcodeWidth
+  cameraPreviewCanvas.height = barcodeHeight
 
-    let ctx = cameraPreviewCanvas.getContext("2d")
-    if (!ctx){
-      throw Error("Cant get canvas context")
-    }
-    ctx.fillStyle = "#AAA"
-    ctx.fillRect(0,0, barcodeWidth, barcodeHeight)
-
-    // capture image from video with the calculated offset and size and draw the image into the canvas
-    ctx.drawImage(video, barcodeXOffset, barcodeYOffset, barcodeWidth, barcodeHeight, 0, 0, barcodeWidth, barcodeHeight)
-    const data = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight)
-    return data
+  let ctx = cameraPreviewCanvas.getContext("2d")
+  if (!ctx){
+    throw Error("Cant get canvas context")
   }
+  ctx.fillStyle = "#AAA"
+  ctx.fillRect(0,0, barcodeWidth, barcodeHeight)
 
-  async function handleDecode(){
-    let t1 = Date.now()
-    let rxing = await import("rxing-wasm")
-    let hints = new rxing.DecodeHintDictionary()
-    hints.set_hint(rxing.DecodeHintTypes.PossibleFormats, `Pdf417`)
-    hints.set_hint(rxing.DecodeHintTypes.TryHarder, `true`)
-    if (!video){
+  // capture image from video with the calculated offset and size and draw the image into the canvas
+  ctx.drawImage(video, barcodeXOffset, barcodeYOffset, barcodeWidth, barcodeHeight, 0, 0, barcodeWidth, barcodeHeight)
+  const data = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight)
+  return data
+}
+
+async function handleDecode(){
+  let t1 = Date.now()
+  let rxing = await import("rxing-wasm")
+  let hints = new rxing.DecodeHintDictionary()
+  hints.set_hint(rxing.DecodeHintTypes.PossibleFormats, `Pdf417`)
+  hints.set_hint(rxing.DecodeHintTypes.TryHarder, `true`)
+  if (!video){
     return
   }
-    let imageData = takepicture(video)
-    //let imageData = await getBarcodeImage(cameraPreviewCanvas)
-    const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
-    try {
-      let t2 = Date.now()
-      let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
-      let text = result.text()
-      let t3 = Date.now()
+  let imageData = takepicture(video)
+  //let imageData = await getBarcodeImage(cameraPreviewCanvas)
+  const luma_data = rxing.convert_js_image_to_luma(new Uint8Array(imageData.data));
+  try {
+    let t2 = Date.now()
+    let result = rxing.decode_barcode_with_hints(luma_data, video.videoWidth, video.videoHeight, hints)
+    let text = result.text()
+    let t3 = Date.now()
 
-      console.log("exec time: ",t3-t2)
-      error = text
-      idData = extractData(text)
-      codeFound()
-    }catch (e) {
-      error = "no se ha encontrado un código, sigue intentando"
-    }
-    let t4 = Date.now()
+    console.log("exec time: ",t3-t2)
+    error = text
+    idData = extractData(text)
+    codeFound()
+  }catch (e) {
+    error = "no se ha encontrado un código, sigue intentando"
   }
+  let t4 = Date.now()
+}
 
-  let rawIdString = ""
-  function extractData(rawString: string){
-    rawIdString = stringToBytes(rawString)
-    for (let i = 0;i<idData.length; i++){
-      let idField = idData[i]
-      let data = rawString.slice(...idField.position);
-      let dataRemoveNulls = data.split("").filter(char => char.codePointAt(0) !== 65533).join("")
-      let dataRemoveLeadingZeros = dataRemoveNulls.replace(/^0+/, '')
-      idField.value = dataRemoveLeadingZeros
-    }
-    return idData
+let rawIdString = ""
+function extractData(rawString: string){
+  rawIdString = stringToBytes(rawString)
+  for (let i = 0;i<idData.length; i++){
+    let idField = idData[i]
+    let data = rawString.slice(...idField.position);
+    let dataRemoveNulls = data.split("").filter(char => char.codePointAt(0) !== 65533).join("")
+    let dataRemoveLeadingZeros = dataRemoveNulls.replace(/^0+/, '')
+    idField.value = dataRemoveLeadingZeros
   }
-  async function setCameraOptions(){
-      let cameras = (await navigator.mediaDevices.enumerateDevices())
-      .filter(device => device.kind === "videoinput")
-    cameraOptions = cameras
-  }
-  function stringToBytes(string: string){
-    let utf8Encode = new TextEncoder();
-    let bytes = Array.from(utf8Encode.encode(string))
-    return bytes.map(byte => byte.toString(16).padStart(2,'0')).join("")
-  }
+  return idData
+}
+async function setCameraOptions(){
+  let cameras = (await navigator.mediaDevices.enumerateDevices())
+  .filter(device => device.kind === "videoinput")
+  cameraOptions = cameras
+}
+function stringToBytes(string: string){
+  let utf8Encode = new TextEncoder();
+  let bytes = Array.from(utf8Encode.encode(string))
+  return bytes.map(byte => byte.toString(16).padStart(2,'0')).join("")
+}
 
-  function codeFound(){
-      clearInterval(timer)
-      appState = "codeFound"
-      video.pause()
-  }
+function codeFound(){
+  clearInterval(timer)
+  appState = "codeFound"
+  video.pause()
+}
 
-  let timer: ReturnType<typeof setTimeout>
-  $: if (appState === "videoInitialized"){
-    timer = setInterval(handleDecode, 1000/decodesPerSecond)
-  }
-  startUp(videoConfig)
+let timer: ReturnType<typeof setTimeout>
+$: if (appState === "videoInitialized"){
+  timer = setInterval(handleDecode, 1000/decodesPerSecond)
+}
+startUp(videoConfig)
 </script>
 {#if appState === "notStarted"}
   <p>accediendo a la cámara<p/>
@@ -248,9 +244,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
       <b>{idField.label}:</b>  <span>{idField.value}</span>
     </div>
   {/each}
-{/if}
-{#if rawIdString}
   <p>Hex data:</p>
-  {rawIdString}
+  <div style="width: 100svw;">{rawIdString}</div>
 {/if}
 <canvas bind:this={cameraPreviewCanvas} style="display: none;"></canvas>
