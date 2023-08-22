@@ -67,8 +67,9 @@ const videoConfig:MediaTrackConstraints = {
 
 async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
   // we use this to ask for camera permission
+  let permissionsVideo: MediaStream
   try{
-    await navigator.mediaDevices.getUserMedia({ audio: false, video: true })
+    permissionsVideo = await navigator.mediaDevices.getUserMedia({ audio: false, video: true })
   }catch{
     console.info("cant get camera permission")
     return
@@ -79,6 +80,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
   if (permission.state !== "granted"){
     return
   }
+  permissionsVideo.getVideoTracks().forEach(track => track.stop())
   await setCameraOptions()
 
   if(!camera?.deviceId){
