@@ -103,8 +103,8 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
         deviceId: camera?.deviceId,
       }
     })
-  }catch{
-    console.log('could not start video source')
+  }catch(e){
+    console.error(e)
     return
   }
 
