@@ -91,6 +91,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     camera = cameras.find(camera => camera.label.includes("back") || camera.label.includes("trasera")) || cameras[0]
     userSelectedCamera = camera
   }
+  console.log(camera)
 
   try{
   video.srcObject = await navigator.mediaDevices
