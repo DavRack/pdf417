@@ -84,6 +84,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     userSelectedCamera = camera
   }
   console.log(camera)
+  video.srcObject = null
   try{
   video.srcObject = await navigator.mediaDevices
     .getUserMedia({
