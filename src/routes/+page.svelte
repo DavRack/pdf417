@@ -79,6 +79,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
   if (permission.state !== "granted"){
     return
   }
+  await setCameraOptions()
 
   if(!camera?.deviceId){
     let cameras = (await navigator.mediaDevices.enumerateDevices())
@@ -93,6 +94,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     userSelectedCamera = camera
   }
 
+  try{
   video.srcObject = await navigator.mediaDevices
     .getUserMedia({
       audio: false,
@@ -101,12 +103,15 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
         deviceId: camera?.deviceId,
       }
     })
+  }catch{
+    console.log('could not start video source')
+    return
+  }
 
   try{
     await video.play()
     console.log("video play good")
     appState = "videoInitialized"
-    await setCameraOptions()
   }catch{
     console.log("video play bad")
   }
