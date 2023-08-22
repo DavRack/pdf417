@@ -67,6 +67,7 @@ const videoConfig:MediaTrackConstraints = {
 
 async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceInfo){
   // we use this to ask for camera permission
+  clearInterval(timer)
 
   await setCameraOptions()
 
@@ -105,6 +106,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     await video.play()
     console.log("video play good")
     appState = "videoInitialized"
+    timer = setInterval(handleDecode, 1000/decodesPerSecond)
   }catch{
     console.log("video play bad")
   }
@@ -195,9 +197,6 @@ function codeFound(){
 }
 
 let timer: ReturnType<typeof setTimeout>
-$: if (appState === "videoInitialized"){
-  timer = setInterval(handleDecode, 1000/decodesPerSecond)
-}
 startUp(videoConfig)
 </script>
 {#if appState === "notStarted"}
