@@ -94,6 +94,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
   console.log(camera)
 
   try{
+    video.cl
   video.srcObject = await navigator.mediaDevices
     .getUserMedia({
       audio: false,
@@ -110,7 +111,7 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
   }
 
   try{
-    await video.play()
+    await video.pause()
     console.log("video play good")
     appState = "videoInitialized"
   }catch{
