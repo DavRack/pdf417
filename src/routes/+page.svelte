@@ -84,10 +84,6 @@ async function startUp(videoConfig: MediaTrackConstraints, camera?: MediaDeviceI
     userSelectedCamera = camera
   }
   console.log(camera)
-  if (video.srcObject){
-    video.pause()
-  }
-
   try{
   video.srcObject = await navigator.mediaDevices
     .getUserMedia({
