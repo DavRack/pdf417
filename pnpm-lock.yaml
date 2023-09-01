@@ -9,7 +9,7 @@ dependencies:
     specifier: ^5.15.5
     version: 5.30.0
   '@sentry/cli':
-    specifier: ^1.67.1
+    specifier: ^1.75.2
     version: 1.75.2
   '@techstark/opencv-js':
     specifier: 4.8.0-release.3
