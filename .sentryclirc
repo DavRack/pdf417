@@ -1,6 +1,6 @@
 [auth]
 token = b73849d3a0654d7aadc4b5aa19ecc63639c0badcef8c4df79775ce8d5a65ad7b
-dsn = https://0fa077f82c7f4162b5b6454c8fc1629c@sentry.tools.vertical.com.co/56
+dsn = https://c262276a34234915a1bc3c77409981b9@sentry.tools.vertical.com.co/55
 [defaults]
 url = https://sentry.tools.vertical.com.co/
 org = idDeco
