@@ -4,4 +4,4 @@ dsn = https://0fa077f82c7f4162b5b6454c8fc1629c@sentry.tools.vertical.com.co/56
 [defaults]
 url = https://sentry.tools.vertical.com.co/
 org = idDeco
-project = idDeco
+project = iddeco
